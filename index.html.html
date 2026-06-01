@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a35;
+    --accent: #e8ff47;
+    --accent-dim: rgba(232, 255, 71, 0.12);
+    --text: #f0f0f0;
+    --muted: #6b6b80;
+    --piso: #5b8fff;
+    --material: #ff6b6b;
+    --maquina: #a78bfa;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(232,255,71,0.3);
+    border-radius: 100px;
+    padding: 4px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    width: fit-content;
+    margin-bottom: 8px;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 7vw, 38px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 300;
+    margin-top: 4px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Inputs */
+  .input-group {
+    margin-bottom: 20px;
+  }
+
+  .input-group:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 10px;
+    letter-spacing: 0.01em;
+  }
+
+  label strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .time-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .time-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .time-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    background: rgba(232,255,71,0.04);
+    box-shadow: 0 0 0 3px rgba(232,255,71,0.08);
+  }
+
+  input[type="number"]::placeholder {
+    color: #3a3a4a;
+    font-size: 16px;
+  }
+
+  .input-suffix {
+    display: flex;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-suffix:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,255,71,0.08);
+  }
+
+  .input-suffix input {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    flex: 1;
+  }
+
+  .input-suffix input:focus {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .suffix-tag {
+    padding: 0 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border-left: 1px solid var(--border);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* Resumen */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .result-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .desglose {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .line-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-piso { background: var(--piso); }
+  .dot-material { background: var(--material); }
+  .dot-maquina { background: var(--maquina); }
+  .dot-revision { background: #34d399; }
+  .dot-ganancia { background: #fbbf24; }
+
+  .item-name {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .item-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* Total */
+  .total-block {
+    background: linear-gradient(135deg, rgba(232,255,71,0.1) 0%, rgba(232,255,71,0.03) 100%);
+    border-top: 1px solid rgba(232,255,71,0.2);
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .total-label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .total-amount {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 8vw, 40px);
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    line-height: 1;
+    transition: all 0.3s ease;
+  }
+
+  .total-amount.updated {
+    animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  /* Rates */
+  .rates-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+  }
+
+  .rate-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 0 12px;
+  }
+
+  .rate-item:first-child { padding-left: 0; }
+  .rate-item:last-child { padding-right: 0; }
+  .rate-item:not(:first-child) {
+    border-left: 1px solid var(--border);
+  }
+
+  .rate-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .rate-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    padding: 0 8px;
+    font-weight: 300;
+  }
+
+  footer em {
+    font-style: normal;
+    color: #4a4a5a;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 32px 24px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .empty-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="badge">Tiempo real</div>
+    <h1>Presupuesto<br><span>Impresión 3D</span></h1>
+    <p class="subtitle">Calculá el costo al instante</p>
+  </header>
+
+  <!-- Tarifas -->
+  <div class="rates-card">
+    <div class="rate-item">
+      <span class="rate-label">Piso</span>
+      <span class="rate-value">$3.500</span>
+    </div>
+    <div class="rate-item">
+      <span class="rate-label">Por hora</span>
+      <span class="rate-value">$2.400</span>
+    </div>
+    <div class="rate-item">
+      <span class="rate-label">Por gramo</span>
+      <span class="rate-value">$40</span>
+    </div>
+    <div class="rate-item">
+      <span class="rate-label">Revisión</span>
+      <span class="rate-value">$600</span>
+    </div>
+  </div>
+
+  <!-- Inputs -->
+  <div class="card">
+    <p class="card-title">// Datos del trabajo</p>
+
+    <div class="input-group">
+      <label><strong>Peso del material</strong></label>
+      <div class="input-suffix">
+        <input type="number" id="peso" min="0" step="0.1" placeholder="0">
+        <span class="suffix-tag">gramos</span>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label><strong>Tiempo de impresión</strong></label>
+      <div class="time-row">
+        <div class="time-field">
+          <span class="time-label">Horas</span>
+          <input type="number" id="horas" min="0" step="1" placeholder="0">
+        </div>
+        <div class="time-field">
+          <span class="time-label">Minutos</span>
+          <input type="number" id="minutos" min="0" max="59" step="1" placeholder="0">
+        </div>
+      </div>
+    </div>
+    <div class="input-group">
+      <label><strong>Revisiones de archivo</strong></label>
+      <div class="input-suffix">
+        <input type="number" id="revisiones" min="0" step="1" placeholder="0">
+        <span class="suffix-tag">× $600</span>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label><strong>Ganancia</strong></label>
+      <div class="input-suffix">
+        <input type="number" id="ganancia" min="0" step="1" placeholder="0">
+        <span class="suffix-tag">%</span>
+      </div>
+    </div>
+
+  </div>
+  <div class="result-card">
+    <div class="result-header">
+      <p class="card-title">// Desglose del presupuesto</p>
+    </div>
+
+    <div id="resultado-contenido">
+      <div class="empty-state">
+        <span class="empty-icon">⬡</span>
+        Ingresá los datos del trabajo<br>para ver el presupuesto
+      </div>
+    </div>
+
+    <div class="total-block">
+      <span class="total-label">Total</span>
+      <span class="total-amount" id="total">$0</span>
+    </div>
+  </div>
+
+  <footer>
+    Incluye revisión técnica de archivo.<br>
+    <em>No incluye retiro de soportes complejos.</em>
+  </footer>
+
+</div>
+
+<script>
+  const PISO = 3500;
+  const VALOR_HORA = 2400;
+  const VALOR_GRAMO = 40;
+  const VALOR_REVISION = 600;
+
+  const pesoInput       = document.getElementById('peso');
+  const horasInput      = document.getElementById('horas');
+  const minutosInput    = document.getElementById('minutos');
+  const revisionesInput = document.getElementById('revisiones');
+  const gananciaInput   = document.getElementById('ganancia');
+  const totalEl         = document.getElementById('total');
+  const contenidoEl     = document.getElementById('resultado-contenido');
+
+  function fmt(n) {
+    return '$' + Math.round(n).toLocaleString('es-AR');
+  }
+
+  function calcular() {
+    const peso       = parseFloat(pesoInput.value)       || 0;
+    const horas      = parseFloat(horasInput.value)      || 0;
+    const minutos    = parseFloat(minutosInput.value)    || 0;
+    const revisiones = parseFloat(revisionesInput.value) || 0;
+    const ganancia   = parseFloat(gananciaInput.value)   || 0;
+
+    const horasTotales = horas + (minutos / 60);
+
+    const isEmpty = peso === 0 && horasTotales === 0 && revisiones === 0 && ganancia === 0;
+
+    if (isEmpty) {
+      contenidoEl.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-icon">⬡</span>
+          Ingresá los datos del trabajo<br>para ver el presupuesto
+        </div>`;
+      totalEl.textContent = '$0';
+      return;
+    }
+
+    const costoPiso     = PISO;
+    const costoMaterial = peso * VALOR_GRAMO;
+    const costoMaquina  = horasTotales * VALOR_HORA;
+    const costoRevision = revisiones * VALOR_REVISION;
+    const subtotal      = costoPiso + costoMaterial + costoMaquina + costoRevision;
+    const costoGanancia = subtotal * (ganancia / 100);
+    const total         = subtotal + costoGanancia;
+
+    const tiempoLabel = (() => {
+      const h = Math.floor(horasTotales);
+      const m = Math.round((horasTotales - h) * 60);
+      if (h === 0 && m === 0) return '—';
+      if (h === 0) return `${m}min`;
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    })();
+
+    const revisionRow = revisiones > 0 ? `
+        <div class="line-item">
+          <div class="item-left">
+            <span class="dot dot-revision"></span>
+            <span class="item-name">Revisiones <em style="color:#3a3a4a;font-size:12px">(×${revisiones})</em></span>
+          </div>
+          <span class="item-value">${fmt(costoRevision)}</span>
+        </div>` : '';
+
+    contenidoEl.innerHTML = `
+      <div class="desglose">
+        <div class="line-item">
+          <div class="item-left">
+            <span class="dot dot-piso"></span>
+            <span class="item-name">Piso fijo</span>
+          </div>
+          <span class="item-value">${fmt(costoPiso)}</span>
+        </div>
+        <div class="line-item">
+          <div class="item-left">
+            <span class="dot dot-material"></span>
+            <span class="item-name">Material <em style="color:#3a3a4a;font-size:12px">(${peso}g)</em></span>
+          </div>
+          <span class="item-value">${fmt(costoMaterial)}</span>
+        </div>
+        <div class="line-item">
+          <div class="item-left">
+            <span class="dot dot-maquina"></span>
+            <span class="item-name">Máquina <em style="color:#3a3a4a;font-size:12px">(${tiempoLabel})</em></span>
+          </div>
+          <span class="item-value">${fmt(costoMaquina)}</span>
+        </div>
+        ${revisionRow}
+        ${ganancia > 0 ? `
+        <div class="divider"></div>
+        <div class="line-item">
+          <div class="item-left">
+            <span class="dot dot-ganancia"></span>
+            <span class="item-name">Ganancia <em style="color:#3a3a4a;font-size:12px">(${ganancia}%)</em></span>
+          </div>
+          <span class="item-value">${fmt(costoGanancia)}</span>
+        </div>` : ''}
+      </div>`;
+
+    const prev = totalEl.textContent;
+    const nuevo = fmt(total);
+    if (prev !== nuevo) {
+      totalEl.textContent = nuevo;
+      totalEl.classList.remove('updated');
+      void totalEl.offsetWidth;
+      totalEl.classList.add('updated');
+    }
+  }
+
+  [pesoInput, horasInput, minutosInput, revisionesInput, gananciaInput].forEach(el => {
+    el.addEventListener('input', calcular);
+  });
+</script>
+</body>
+</html>
